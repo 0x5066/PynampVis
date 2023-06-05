@@ -18,7 +18,7 @@ running = True  # Variable to control the main loop
 def draw_wave(indata, frames, time, status):
     global screen, last_y, window_width, window_height  # Declare 'screen', 'last_y', 'window_width', and 'window_height' as global
 
-    mono_audio = indata[:, 0]  # Extract mono audio from the input data
+    mono_audio = indata[:, 0]+0.03  # Extract mono audio from the input data
 
     screen *= 0  # Clear the screen
 
