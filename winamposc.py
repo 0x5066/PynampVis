@@ -1,3 +1,5 @@
+#ChatGPT wrote most of this.
+
 import pygame
 import sounddevice as sd
 import numpy as np
