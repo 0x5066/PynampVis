@@ -3,6 +3,7 @@
 import pygame
 import sounddevice as sd
 import numpy as np
+import argparse
 
 pygame.init()
 window_width = 75  # Initial desired screen width
@@ -14,6 +15,11 @@ gain = 2
 last_y = 0  # Initialize last_y
 window = pygame.display.set_mode((window_width*8, window_height*16), pygame.RESIZABLE)
 running = True  # Variable to control the main loop
+
+parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
+parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
+args = parser.parse_args()
+#print(args.oscstyle)
 
 def draw_wave(indata, frames, time, status):
     global screen, last_y, window_width, window_height  # Declare 'screen', 'last_y', 'window_width', and 'window_height' as global
@@ -31,19 +37,43 @@ def draw_wave(indata, frames, time, status):
         x = np.clip(x, 0, window_width - 1)  # Clip x value to the valid range
         y = np.clip(y, 0, window_height - 1)  # Clip y value to the valid range
 
-        if x == 0:
+        if args.oscstyle == ["lines"]:
+            if x == 0:
+                last_y = y
+
+            top = y
+            bottom = last_y
             last_y = y
 
-        top = y
-        bottom = last_y
-        last_y = y
+            if bottom < top:
+                [bottom, top] = [top, bottom]
+                top += 1
 
-        if bottom < top:
-            [bottom, top] = [top, bottom]
-            top += 1
+            for dy in range(top, bottom + 1):
+                screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
 
-        for dy in range(top, bottom + 1):
-            screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
+        if args.oscstyle == ["solid"]:
+
+            if x == 0:
+                last_y = y
+
+            if y >= 8:
+                top = 8
+                bottom = y
+            else:
+                top = y
+                bottom = 7
+
+            for dy in range(top, bottom + 1):
+                screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
+
+        if args.oscstyle == ["dots"]:
+
+            top = y
+            bottom = y
+
+            for y in range(top, bottom +1):
+                screen[x, y] = (255, 255, 255)  # Fill the range with the pixel color
 
     # Convert the screen array to a pygame.Surface object
     surface = pygame.surfarray.make_surface(screen)
