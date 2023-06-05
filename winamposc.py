@@ -12,7 +12,7 @@ xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
 gain = 2
 last_y = 0  # Initialize last_y
-window = pygame.display.set_mode((window_width, window_height), pygame.RESIZABLE)
+window = pygame.display.set_mode((window_width*8, window_height*16), pygame.RESIZABLE)
 running = True  # Variable to control the main loop
 
 def draw_wave(indata, frames, time, status):
