@@ -1,9 +1,9 @@
-#ChatGPT wrote most of this.
-
 import pygame
 import sounddevice as sd
 import numpy as np
 import argparse
+from viscolors import range_by_amplitude, load_colors
+import os
 
 pygame.init()
 window_width = 75  # Initial desired screen width
@@ -21,10 +21,21 @@ parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', 
 args = parser.parse_args()
 #print(args.oscstyle)
 
-def draw_wave(indata, frames, time, status):
-    global screen, last_y, window_width, window_height  # Declare 'screen', 'last_y', 'window_width', and 'window_height' as global
+filename = 'viscolor.txt'
 
-    mono_audio = indata[:, 0]+0.03  # Extract mono audio from the input data
+if os.path.exists(filename):
+    osc_colors = load_colors(filename)
+else:
+    filename_lower = filename.lower()
+    if os.path.exists(filename_lower):
+        osc_colors = load_colors(filename_lower)
+    else:
+        osc_colors = load_colors(filename.upper())
+
+def draw_wave(indata, frames, time, status):
+    global screen, last_y, window_width, window_height, osc_colors  # Declare 'osc_colors' as global
+
+    mono_audio = indata[:, 0] + 0.03  # Extract mono audio from the input data
 
     screen *= 0  # Clear the screen
 
@@ -32,6 +43,11 @@ def draw_wave(indata, frames, time, status):
     blocksize_ratio = int(blocksize / length)
     ys = window_height // 2 * (1 - np.clip(gain * mono_audio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)  # Convert ys to integer
+
+    # Define the thresholds for color assignments
+    thresholds = [0.1, 0.3, 0.5, 0.7, 0.9]
+    num_thresholds = len(thresholds)
+    num_colors = len(osc_colors)
 
     for x, y in zip(xs, ys):
         x = np.clip(x, 0, window_width - 1)  # Clip x value to the valid range
@@ -49,11 +65,34 @@ def draw_wave(indata, frames, time, status):
                 [bottom, top] = [top, bottom]
                 top += 1
 
+            # Calculate the color index based on the amplitude
+            amplitude = abs(y + 0.2 - window_height / 2) / (window_height / 2)
+
+            if amplitude < thresholds[0]:
+                color_index = 0
+            elif amplitude < thresholds[1]:
+                color_index = 1
+            elif amplitude < thresholds[2]:
+                color_index = 2
+            elif amplitude < thresholds[3]:
+                color_index = 3
+            elif amplitude < thresholds[4]:
+                color_index = 4
+            else:
+                color_index = 5
+
+            if top == 0:
+                color_index = 5
+
+            if top == 0 and color_index == 5:
+                color_index = 4
+
+            color_top = osc_colors[color_index % num_colors]
+
             for dy in range(top, bottom + 1):
-                screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
+                screen[x, dy] = color_top
 
         if args.oscstyle == ["solid"]:
-
             if x == 0:
                 last_y = y
 
@@ -64,16 +103,48 @@ def draw_wave(indata, frames, time, status):
                 top = y
                 bottom = 7
 
+            # Calculate the color index based on the amplitude
+            amplitude = abs(y + 0.2 - window_height / 2) / (window_height / 2)
+
+            if amplitude < thresholds[0]:
+                color_index = 0
+            elif amplitude < thresholds[1]:
+                color_index = 1
+            elif amplitude < thresholds[2]:
+                color_index = 2
+            elif amplitude < thresholds[3]:
+                color_index = 3
+            elif amplitude < thresholds[4]:
+                color_index = 4
+            else:
+                color_index = 5
+
+            if top == 0:
+                color_index = 5
+
+            if top == 0 and color_index == 5:
+                color_index = 4
+
+            color_top = osc_colors[color_index % num_colors]
+
             for dy in range(top, bottom + 1):
-                screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
+                screen[x, dy] = color_top
 
         if args.oscstyle == ["dots"]:
-
             top = y
             bottom = y
 
-            for y in range(top, bottom +1):
-                screen[x, y] = (255, 255, 255)  # Fill the range with the pixel color
+            # Calculate the color index based on the amplitude
+            amplitude = abs(y + 0.2 - window_height / 2) / (window_height / 2)
+            color_index = int(amplitude * num_thresholds)
+
+            if top == 0 and color_index == 5:
+                color_index = 4
+
+            color_top = osc_colors[color_index % num_colors]
+
+            for dy in range(top, bottom + 1):
+                screen[x, dy] = color_top
 
     # Convert the screen array to a pygame.Surface object
     surface = pygame.surfarray.make_surface(screen)
