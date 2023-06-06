@@ -168,7 +168,7 @@ def resize_window(width, height):
     # Update xs with the new window width
     xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 
-with sd.InputStream(callback=draw_wave, channels=1, blocksize=1152):
+with sd.InputStream(callback=draw_wave, channels=1, blocksize=blocksize):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
