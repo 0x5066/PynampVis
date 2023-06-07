@@ -8,7 +8,7 @@ import argparse
 pygame.init()
 window_width = 75  # Initial desired screen width
 window_height = 16  # Initial desired screen height
-blocksize = 576  # Blocksize for the audio buffer
+#blocksize = 576  # Blocksize for the audio buffer
 xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
 gain = 2
@@ -18,8 +18,8 @@ running = True  # Variable to control the main loop
 
 parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
 parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
+parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
 args = parser.parse_args()
-#print(args.oscstyle)
 
 def draw_wave(indata, frames, time, status):
     global screen, last_y, window_width, window_height  # Declare 'screen', 'last_y', 'window_width', and 'window_height' as global
@@ -29,7 +29,7 @@ def draw_wave(indata, frames, time, status):
     screen *= 0  # Clear the screen
 
     length = len(xs)
-    blocksize_ratio = int(blocksize / length)
+    blocksize_ratio = int(args.blocksize / length)
     ys = window_height // 2 * (1 - np.clip(gain * mono_audio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)  # Convert ys to integer
 
@@ -97,7 +97,7 @@ def resize_window(width, height):
     # Update xs with the new window width
     xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 
-with sd.InputStream(callback=draw_wave, channels=1, blocksize=blocksize):
+with sd.InputStream(callback=draw_wave, channels=1, blocksize=args.blocksize):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
