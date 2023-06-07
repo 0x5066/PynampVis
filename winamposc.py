@@ -4,84 +4,117 @@ import pygame
 import sounddevice as sd
 import numpy as np
 import argparse
+from viscolors import load_colors
 
 pygame.init()
+global screen, last_y, window_width, window_height
 window_width = 75  # Initial desired screen width
 window_height = 16  # Initial desired screen height
-#blocksize = 576  # Blocksize for the audio buffer
 xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
 gain = 2
-last_y = 0  # Initialize last_y
-window = pygame.display.set_mode((window_width*8, window_height*16), pygame.RESIZABLE)
-running = True  # Variable to control the main loop
+last_y = 0
+peak1 = 0
+window = pygame.display.set_mode((window_width*8, window_height*8), pygame.RESIZABLE)
+running = True
 
 parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
 parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
+parser.add_argument("-v", "--visualization", help="Visualization type: oscilloscope or analyzer", type=str.lower, default=["analyzer"])
 parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
 args = parser.parse_args()
 
+# Load the first two colors from the viscolor.txt file
+colors = load_colors("viscolor.txt")
+
 def draw_wave(indata, frames, time, status):
-    global screen, last_y, window_width, window_height  # Declare 'screen', 'last_y', 'window_width', and 'window_height' as global
 
-    mono_audio = indata[:, 0]+0.03  # Extract mono audio from the input data
-
-    screen *= 0  # Clear the screen
+    mono_audio = indata[:, 0]+0.03
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
     ys = window_height // 2 * (1 - np.clip(gain * mono_audio[::blocksize_ratio], -1, 1))
-    ys = ys.astype(int)  # Convert ys to integer
+    ys = ys.astype(int)
 
-    for x, y in zip(xs, ys):
-        x = np.clip(x, 0, window_width - 1)  # Clip x value to the valid range
-        y = np.clip(y, 0, window_height - 1)  # Clip y value to the valid range
-
-        if args.oscstyle == ["lines"]:
-            if x == 0:
-                last_y = y
-
-            top = y
-            bottom = last_y
-            last_y = y
-
-            if bottom < top:
-                [bottom, top] = [top, bottom]
-                top += 1
-
-            for dy in range(top, bottom + 1):
-                screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
-
-        if args.oscstyle == ["solid"]:
-
-            if x == 0:
-                last_y = y
-
-            if y >= 8:
-                top = 8
-                bottom = y
+    # Draw the grid background
+    for x in range(window_width):
+        for y in range(window_height):
+            if x % 2 == 1 or y % 2 == 0:
+                screen[x, y] = colors[0]
             else:
+                screen[x, y] = colors[1]
+
+    # Draw the visualization based on the selected type
+    if "oscilloscope" in args.visualization:
+        for x, y in zip(xs, ys):
+            x = np.clip(x, 0, window_width - 1)
+            y = np.clip(y, 0, window_height - 1)
+
+            if "lines" in args.oscstyle:
+                if x == 0:
+                    last_y = y
+
                 top = y
-                bottom = 7
+                bottom = last_y
+                last_y = y
 
-            for dy in range(top, bottom + 1):
-                screen[x, dy] = (255, 255, 255)  # Fill the range with the pixel color
+                if bottom < top:
+                    [bottom, top] = [top, bottom]
+                    top += 1
 
-        if args.oscstyle == ["dots"]:
+                for dy in range(top, bottom + 1):
+                    screen[x, dy] = (255, 255, 255)
 
-            top = y
-            bottom = y
+            elif "solid" in args.oscstyle:
+                if x == 0:
+                    last_y = y
 
-            for y in range(top, bottom +1):
-                screen[x, y] = (255, 255, 255)  # Fill the range with the pixel color
+                if y >= 8:
+                    top = 8
+                    bottom = y
+                else:
+                    top = y
+                    bottom = 7
 
-    # Convert the screen array to a pygame.Surface object
+                for dy in range(top, bottom + 1):
+                    screen[x, dy] = (255, 255, 255)
+
+            elif "dots" in args.oscstyle:
+                top = y
+                bottom = y
+
+                for dy in range(top, bottom + 1):
+                    screen[x, dy] = (255, 255, 255)
+
+    else:
+        global peak1
+        # Perform FFT on the audio data
+        spectrum = np.abs(np.fft.fft((mono_audio-0.03)/16))
+        spectrum = spectrum[:window_width]
+        #spectrum = np.max(spectrum)
+        #if np.all(spectrum >= peak1):
+        #    peak1 = spectrum
+        #else:
+        #    peak1 -= 0.1
+
+        weights = np.linspace(0.1, 1.0, num=window_width)
+        weighted_spectrum = np.zeros(window_width)
+        for y in range(window_width):
+            start = int(y * length / window_width)
+            end = int((y + 1) * length / window_width)
+            weighted_spectrum[y] = np.mean(spectrum[start:end] * weights[start:end])
+        #weighted_spectrum /= np.max(weighted_spectrum)
+
+        for x, y in zip(xs, weighted_spectrum * window_height):
+            x = np.clip(x, 0, window_width - 1)
+            y = np.clip(int(y), 0, window_height - 1)
+            for dy in range(-y+16, window_height):
+                color_index = 2 + (dy % (len(colors) - 1))
+                color = colors[color_index]
+                screen[x, dy] = color
+
     surface = pygame.surfarray.make_surface(screen)
-
-    # Rescale the surface to match the window size
     scaled_surface = pygame.transform.scale(surface, (window.get_width(), window.get_height()))
-
-    # Blit the scaled surface onto the window
     window.blit(scaled_surface, (0, 0))
     pygame.display.flip()
 
@@ -91,10 +124,7 @@ def resize_window(width, height):
     window_width = width
     window_height = height
 
-    # Resize the screen array
     screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
-
-    # Update xs with the new window width
     xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 
 with sd.InputStream(callback=draw_wave, channels=1, blocksize=args.blocksize):
@@ -103,3 +133,4 @@ with sd.InputStream(callback=draw_wave, channels=1, blocksize=args.blocksize):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+

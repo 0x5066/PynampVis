@@ -1,6 +1,17 @@
 import os
 
 def load_colors(file_path):
+    colors = []
+    with open(file_path, "r") as file:
+        for line in file:
+            if line.startswith("//"):
+                continue
+            values = line.strip().split(",")
+            color = tuple(map(int, values[:3]))
+            colors.append(color)
+    return colors
+
+""" def load_colors(file_path):
     # Convert the file_path to lowercase for case-insensitive matching
     lower_file_path = file_path.lower()
 
@@ -17,9 +28,10 @@ def load_colors(file_path):
                 color = [int(value) for value in color_values[:3]]
                 colors.append(color)
     osc_colors = colors[18:23]  # Extract the oscilloscope colors only
-    return osc_colors
+    return osc_colors """
 
-def range_by_amplitude(amplitude, osc_colors):
+
+""" def range_by_amplitude(amplitude, osc_colors):
     #amplitude = abs(amplitude)  # Apply the absolute value to ensure positive amplitudes
     if amplitude >= 0:
         return [0, 3]
@@ -52,4 +64,4 @@ def range_by_amplitude(amplitude, osc_colors):
     elif amplitude >= 14:
         return [14, 4]
     else:
-        return [15, 4]
+        return [15, 4] """
