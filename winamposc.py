@@ -10,14 +10,20 @@ pygame.init()
 global screen, last_y, window_width, window_height
 window_width = 75  # Initial desired screen width
 window_height = 16  # Initial desired screen height
+window = pygame.display.set_mode((window_width * 8, window_height * 8), pygame.RESIZABLE)
 xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
 gain = 2
 last_y = 0
-peak1 = 0
-window = pygame.display.set_mode((window_width * 8, window_height * 8), pygame.RESIZABLE)
 running = True
 visualization_mode = 0  # 0 for oscilloscope, 1 for analyzer, 2 for grid
+
+# Set the sample rate
+sd.default.samplerate = 44100
+
+# Desired frequency range in Hz
+frequency_min = 0
+frequency_max = 19000
 
 parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
 parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
@@ -29,11 +35,29 @@ args = parser.parse_args()
 # Load the first two colors from the viscolor.txt file
 colors = load_colors("viscolor.txt")
 
+def weighting_function(frequencies):
+    """
+    Custom weighting function to emphasize higher frequencies and reduce the magnitude of lower frequencies.
+    Modify this function as needed to achieve the desired effect.
+    """
+    weights = np.ones_like(frequencies)  # Start with equal weights for all frequencies
+
+    # Apply natural weighting
+    A_weighting = [-90.4, -73.4, -66.7, -50.5, -44.7, -39.4, -34.6, -30.2, -26.2, -22.5, -19.1, -16.1, -13.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
+    f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000]
+
+    for i, freq in enumerate(frequencies):
+        closest_index = np.abs(np.array(f_values) - freq).argmin()
+        weights[i] *= 10 ** (A_weighting[closest_index] / 20.0)
+
+    return weights
 
 def draw_wave(indata, frames, time, status):
     global visualization_mode
 
     mono_audio = indata[:, 0] + 0.03
+    length = len(mono_audio)
+    fft_size = length
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
@@ -91,25 +115,37 @@ def draw_wave(indata, frames, time, status):
                     screen[x, dy] = (255, 255, 255)
 
     elif visualization_mode == 0:  # Analyzer mode
-        global peak1
-        # Perform FFT on the audio data
-        spectrum = np.abs(np.fft.fft((mono_audio - 0.03) / 128))
-        spectrum = spectrum[:window_width]
 
-        weights = np.linspace(0.1, 1.0, num=window_width)
-        weighted_spectrum = np.zeros(window_width)
-        for y in range(window_width):
-            start = int(y * length / window_width)
-            end = int((y + 1) * length / window_width)
-            weighted_spectrum[y] = np.mean(spectrum[start:end] * weights[start:end])
+        spectrum = np.abs(np.fft.fft((mono_audio - 0.03) / 18 , n=fft_size))
+        frequencies = np.fft.fftfreq(fft_size, 1 / sd.default.samplerate)
+        valid_indices = np.logical_and(frequencies >= frequency_min, frequencies <= frequency_max)
+        valid_frequencies = frequencies[valid_indices]
+        valid_spectrum = spectrum[valid_indices]
 
-        for x, y in zip(xs, weighted_spectrum * window_height):
-            x = np.clip(int(np.log10(x + 1) * window_width / np.log10(window_width + 1)), 0, window_width - 1)
-            y = np.clip(int(y * window_height), 0, window_height - 1)
-            for dy in range(-y + window_height, window_height):
-                color_index = 2 + (dy % (len(colors) - 1))
+        weights = weighting_function(valid_frequencies)
+        weighted_spectrum = valid_spectrum * weights
+
+        scaled_spectrum = weighted_spectrum * window_height
+
+        for x in range(len(valid_frequencies)):
+            frequency = valid_frequencies[x]
+            intensity = scaled_spectrum[x]
+
+            # Skip drawing if intensity is below threshold
+            if intensity < 1:
+                continue
+
+            x_norm = (frequency - frequency_min) / (frequency_max - frequency_min)
+            x_coord = int(x_norm * window_width)
+            x_coord = np.clip(x_coord, 0, window_width - 1)  # Clip x_coord within the valid range
+
+            y = int(window_height - intensity) + 1  # Shift down by 1 pixel
+            y = np.clip(y, 1, window_height - 1)  # Clip y within the valid range
+
+            for dy in range(y, window_height):
+                color_index = (2 + dy) % len(colors)
                 color = colors[color_index]
-                screen[x, dy] = color
+                screen[x_coord, dy] = color
 
     elif visualization_mode == 2:  # Grid mode
         pass  # Nothing to draw, as the grid is already drawn in the background
