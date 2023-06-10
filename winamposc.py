@@ -7,6 +7,7 @@ import argparse
 from viscolors import load_colors
 
 pygame.init()
+pygame.display.set_caption('Winamp Mini Visualizer (in Python)')
 global screen, last_y, window_width, window_height
 window_width = 75  # Initial desired screen width
 window_height = 16  # Initial desired screen height
@@ -42,9 +43,10 @@ def weighting_function(frequencies):
     """
     weights = np.ones_like(frequencies)  # Start with equal weights for all frequencies
 
-    # Apply natural weighting
-    A_weighting = [-90.4, -73.4, -66.7, -50.5, -44.7, -39.4, -34.6, -30.2, -26.2, -22.5, -19.1, -16.1, -13.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
+    # Apply natural weighting, kind of like an equalizer...
+    A_weighting = [-16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.1, -13.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
     f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000]
+    # frequency values
 
     for i, freq in enumerate(frequencies):
         closest_index = np.abs(np.array(f_values) - freq).argmin()
