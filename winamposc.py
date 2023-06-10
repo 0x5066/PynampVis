@@ -54,6 +54,12 @@ def weighting_function(frequencies):
 
     return weights
 
+def OscColors():
+    ScopeColors = [colors[21], colors[21], colors[20], colors[20], colors[19], colors[19], colors[18], colors[18], colors[19], colors[19], colors[20], colors[20], colors[21], colors[21], colors[22], colors[22]]
+    return ScopeColors
+
+Oscicolors = OscColors() # inits the whole thing
+
 def draw_wave(indata, frames, time, status):
     global visualization_mode
 
@@ -93,10 +99,9 @@ def draw_wave(indata, frames, time, status):
                     top += 1
 
                 for dy in range(top, bottom + 1):
-                    color_index = (2 + top) % len(colors)
-                    color = colors[color_index]
-                    screen[x, dy] = color
-                    #screen[x, dy] = (255, 255, 255)
+                    color_index = (top) % len(Oscicolors)
+                    ScopeColors = Oscicolors[color_index]
+                    screen[x, dy] = ScopeColors
 
             elif "solid" in args.oscstyle:
                 if x == 0:
@@ -110,14 +115,18 @@ def draw_wave(indata, frames, time, status):
                     bottom = 7
 
                 for dy in range(top, bottom + 1):
-                    screen[x, dy] = (255, 255, 255)
+                    color_index = (y) % len(Oscicolors)
+                    ScopeColors = Oscicolors[color_index]
+                    screen[x, dy] = ScopeColors
 
             elif "dots" in args.oscstyle:
                 top = y
                 bottom = y
 
                 for dy in range(top, bottom + 1):
-                    screen[x, dy] = (255, 255, 255)
+                    color_index = (y) % len(Oscicolors)
+                    ScopeColors = Oscicolors[color_index]
+                    screen[x, dy] = ScopeColors
 
     elif visualization_mode == 0:  # Analyzer mode
 
