@@ -44,7 +44,7 @@ def weighting_function(frequencies):
     weights = np.ones_like(frequencies)  # Start with equal weights for all frequencies
 
     # Apply natural weighting, kind of like an equalizer...
-    A_weighting = [-16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.2, -16.1, -13.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
+    A_weighting = [-18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -17.2, -17.2, -16.2, -16.1, -13.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
     f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000]
     # frequency values
 
