@@ -24,7 +24,7 @@ sd.default.samplerate = 44100
 
 # Desired frequency range in Hz
 frequency_min = 0
-frequency_max = 19000
+frequency_max = 16993.78
 
 parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
 parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
@@ -59,7 +59,7 @@ def draw_wave(indata, frames, time, status):
 
     mono_audio = indata[:, 0] + 0.03
     length = len(mono_audio)
-    fft_size = length
+    fft_size = length//3
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
@@ -93,7 +93,10 @@ def draw_wave(indata, frames, time, status):
                     top += 1
 
                 for dy in range(top, bottom + 1):
-                    screen[x, dy] = (255, 255, 255)
+                    color_index = (2 + top) % len(colors)
+                    color = colors[color_index]
+                    screen[x, dy] = color
+                    #screen[x, dy] = (255, 255, 255)
 
             elif "solid" in args.oscstyle:
                 if x == 0:
@@ -118,21 +121,18 @@ def draw_wave(indata, frames, time, status):
 
     elif visualization_mode == 0:  # Analyzer mode
 
-        spectrum = np.abs(np.fft.fft((mono_audio - 0.03) / 18 , n=fft_size))
+        spectrum = np.abs(np.fft.fft((mono_audio - 0.03) / 18, n=fft_size))
         frequencies = np.fft.fftfreq(fft_size, 1 / sd.default.samplerate)
-        valid_indices = np.logical_and(frequencies >= frequency_min, frequencies <= frequency_max)
-        valid_frequencies = frequencies[valid_indices]
-        valid_spectrum = spectrum[valid_indices]
 
-        weights = weighting_function(valid_frequencies)
-        weighted_spectrum = valid_spectrum * weights
+        weights = weighting_function(frequencies)
+        weighted_spectrum = spectrum * weights
 
         scaled_spectrum = weighted_spectrum * window_height
 
-        for x in range(len(valid_frequencies)):
-            frequency = valid_frequencies[x]
+        for x in range(len(frequencies)):
+            frequency = frequencies[x]
             intensity = scaled_spectrum[x]
-
+        
             # Skip drawing if intensity is below threshold
             if intensity < 1:
                 continue
