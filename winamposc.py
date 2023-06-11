@@ -6,6 +6,34 @@ import numpy as np
 import argparse
 from viscolors import load_colors
 
+def get_sound_devices():
+    devices = sd.query_devices()
+    return devices
+
+parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
+parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
+#parser.add_argument("-v", "--visualization", help="Visualization type: oscilloscope or analyzer", type=str.lower,
+                    #choices=["oscilloscope", "analyzer", "grid"], default="analyzer")
+parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
+parser.add_argument("-d", "--device", help="Select your Device", type=int, default=None)
+args = parser.parse_args()
+
+# Check if the device argument is provided
+if args.device is None:
+    # If device argument is not provided, retrieve the list of sound devices
+    sound_devices = get_sound_devices()
+
+    # Print the list of sound devices
+    print("Available sound devices:")
+    for idx, device in enumerate(sound_devices):
+        print(f"{idx}: {device['name']}")
+
+    exit()
+
+else:
+    # If device argument is provided, use it for further processing
+    selected_device = args.device
+
 pygame.init()
 pygame.display.set_caption('Winamp Mini Visualizer (in Python)')
 global screen, last_y, window_width, window_height
@@ -25,13 +53,6 @@ sd.default.samplerate = 44100
 # Desired frequency range in Hz
 frequency_min = 0
 frequency_max = 17173
-
-parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
-parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
-#parser.add_argument("-v", "--visualization", help="Visualization type: oscilloscope or analyzer", type=str.lower,
-                    #choices=["oscilloscope", "analyzer", "grid"], default="analyzer")
-parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
-args = parser.parse_args()
 
 # Load the first two colors from the viscolor.txt file
 colors = load_colors("viscolor.txt")
@@ -178,7 +199,7 @@ def resize_window(width, height):
     xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 
 
-with sd.InputStream(callback=draw_wave, channels=1, blocksize=args.blocksize):
+with sd.InputStream(callback=draw_wave, channels=1, blocksize=args.blocksize, latency=0, device=args.device):
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
