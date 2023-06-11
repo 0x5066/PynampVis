@@ -164,6 +164,7 @@ def draw_wave(indata, frames, time, status):
         for x in range(len(frequencies)):
             frequency = frequencies[x]
             intensity = scaled_spectrum[x]
+            #print(intensity)
         
             # Skip drawing if intensity is below threshold
             if intensity < 1:
@@ -184,7 +185,10 @@ def draw_wave(indata, frames, time, status):
 
             if "line" in args.specdraw:
                 for dy in range(y, window_height):
-                    color_index = (2 + y) % len(colors)
+                    if intensity > 16:
+                        color_index = (1 + y) % len(colors)
+                    else:
+                        color_index = (2 + y) % len(colors)
                     color = colors[color_index]
                     screen[x_coord, dy] = color
 
