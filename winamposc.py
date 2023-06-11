@@ -12,6 +12,7 @@ def get_sound_devices():
 
 parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
 parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
+parser.add_argument("-s", "--specdraw", help="Coloring style", nargs='*', type=str.lower, default=["normal"])
 #parser.add_argument("-v", "--visualization", help="Visualization type: oscilloscope or analyzer", type=str.lower,
                     #choices=["oscilloscope", "analyzer", "grid"], default="analyzer")
 parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
@@ -175,10 +176,23 @@ def draw_wave(indata, frames, time, status):
             y = int(window_height - intensity) + 1  # Shift down by 1 pixel
             y = np.clip(y, 1, window_height - 1)  # Clip y within the valid range
 
-            for dy in range(y, window_height):
-                color_index = (2 + dy) % len(colors)
-                color = colors[color_index]
-                screen[x_coord, dy] = color
+            if "normal" in args.specdraw:
+                for dy in range(y, window_height):
+                    color_index = (2 + dy) % len(colors)
+                    color = colors[color_index]
+                    screen[x_coord, dy] = color
+
+            if "line" in args.specdraw:
+                for dy in range(y, window_height):
+                    color_index = (2 + y) % len(colors)
+                    color = colors[color_index]
+                    screen[x_coord, dy] = color
+
+            if "fire" in args.specdraw:
+                for dy in range(y, window_height):
+                    color_index = (3 + dy-y) % len(colors)
+                    color = colors[color_index]
+                    screen[x_coord, dy] = color
 
     elif visualization_mode == 2:  # Grid mode
         pass  # Nothing to draw, as the grid is already drawn in the background
