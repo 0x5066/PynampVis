@@ -4,6 +4,7 @@ import pygame
 import sounddevice as sd
 import numpy as np
 import argparse
+from scipy.signal import windows
 from viscolors import load_colors
 
 def get_sound_devices():
@@ -67,7 +68,7 @@ def weighting_function(frequencies):
 
     # Apply natural weighting, kind of like an equalizer...
     #                                                                                           secbar
-    A_weighting = [-18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -17.2, -17.2, -16.2, -10.1, -13.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
+    A_weighting = [-19.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -17.2, -17.2, -16.2, -10.1, -6.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
     f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000]
     # frequency values
 
@@ -80,6 +81,7 @@ def weighting_function(frequencies):
 def OscColors():
     ScopeColors = [colors[21], colors[21], colors[20], colors[20], colors[19], colors[19], colors[18], colors[18], colors[19], colors[19], colors[20], colors[20], colors[21], colors[21], colors[22], colors[22]]
     return ScopeColors
+    # maps to 4 4 3 3 2 2 1 1 2 2 3 3 4 4 5 5
 
 Oscicolors = OscColors() # inits the whole thing
 
@@ -153,7 +155,10 @@ def draw_wave(indata, frames, time, status):
 
     elif visualization_mode == 0:  # Analyzer mode
 
-        spectrum = np.abs(np.fft.fft((mono_audio - 0.03) / 18, n=fft_size))
+        window2 = windows.hann(fft_size)
+        windowed_audio = (mono_audio - 0.03) / 12
+        windowed_audio = np.resize(windowed_audio, len(window2)) * window2
+        spectrum = np.abs(np.fft.fft(windowed_audio, n=fft_size))
         frequencies = np.fft.fftfreq(fft_size, 1 / sd.default.samplerate)
 
         weights = weighting_function(frequencies)
@@ -170,33 +175,31 @@ def draw_wave(indata, frames, time, status):
             if intensity < 1:
                 continue
 
-            x_norm = (frequency - frequency_min) / (frequency_max - frequency_min)
-            x_coord = int(x_norm * window_width)
+            x_norm = ((frequency - frequency_min) / (frequency_max - frequency_min))
+            x_coord = int((x_norm * window_width) * 1152 / args.blocksize)
             x_coord = np.clip(x_coord, 0, window_width - 1)  # Clip x_coord within the valid range
 
             y = int(window_height - intensity) + 1  # Shift down by 1 pixel
             y = np.clip(y, 1, window_height - 1)  # Clip y within the valid range
 
-            if "normal" in args.specdraw:
-                for dy in range(y, window_height):
-                    color_index = (2 + dy) % len(colors)
-                    color = colors[color_index]
-                    screen[x_coord, dy] = color
+            for dy in range(y, window_height):
+                if "normal" in args.specdraw:
+                        color_index = (2 + dy) % len(colors)
+                        color = colors[color_index]
+                        screen[x_coord, dy] = color
 
-            if "line" in args.specdraw:
-                for dy in range(y, window_height):
-                    if intensity > 16:
-                        color_index = (1 + y) % len(colors)
-                    else:
-                        color_index = (2 + y) % len(colors)
-                    color = colors[color_index]
-                    screen[x_coord, dy] = color
+                if "line" in args.specdraw:
+                        if intensity > 16:
+                            color_index = (1 + y) % len(colors)
+                        else:
+                            color_index = (2 + y) % len(colors)
+                        color = colors[color_index]
+                        screen[x_coord, dy] = color
 
-            if "fire" in args.specdraw:
-                for dy in range(y, window_height):
-                    color_index = (3 + dy-y) % len(colors)
-                    color = colors[color_index]
-                    screen[x_coord, dy] = color
+                if "fire" in args.specdraw:
+                        color_index = (3 + dy-y) % len(colors)
+                        color = colors[color_index]
+                        screen[x_coord, dy] = color
 
     elif visualization_mode == 2:  # Grid mode
         pass  # Nothing to draw, as the grid is already drawn in the background
@@ -217,7 +220,7 @@ def resize_window(width, height):
     xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 
 
-with sd.InputStream(callback=draw_wave, channels=1, blocksize=args.blocksize, latency=0, device=args.device):
+with sd.InputStream(callback=draw_wave, channels=2, blocksize=args.blocksize*2, latency=0, device=args.device):
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
