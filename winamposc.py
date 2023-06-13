@@ -88,7 +88,7 @@ Oscicolors = OscColors() # inits the whole thing
 def draw_wave(indata, frames, time, status):
     global visualization_mode
 
-    mono_audio = indata[:, 0] + 0.03
+    mono_audio = (indata[:, 0] + indata[:, 1] / 2) + 0.03
     length = len(mono_audio)
     fft_size = length//3
 
