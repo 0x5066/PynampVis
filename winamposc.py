@@ -54,7 +54,7 @@ sd.default.samplerate = 44100
 
 # Desired frequency range in Hz
 frequency_min = 0
-frequency_max = 17173
+frequency_max = 22051
 
 # Load the first two colors from the viscolor.txt file
 colors = load_colors("viscolor.txt")
@@ -68,7 +68,7 @@ def weighting_function(frequencies):
 
     # Apply natural weighting, kind of like an equalizer...
     #                                                                                           secbar
-    A_weighting = [-19.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -17.2, -17.2, -16.2, -10.1, -6.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
+    A_weighting = [-19.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -18.2, -17.2, -13.2, -16.2, -10.1, -6.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
     f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000]
     # frequency values
 
@@ -90,10 +90,11 @@ def draw_wave(indata, frames, time, status):
 
     mono_audio = (indata[:, 0] + indata[:, 1] / 2) + 0.03
     length = len(mono_audio)
-    fft_size = length//3
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
+    fft_size = length*4
+    #print(xs)
     ys = window_height // 2 * (1 - np.clip(gain * mono_audio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)
 
@@ -185,21 +186,16 @@ def draw_wave(indata, frames, time, status):
             for dy in range(y, window_height):
                 if "normal" in args.specdraw:
                         color_index = (2 + dy) % len(colors)
-                        color = colors[color_index]
-                        screen[x_coord, dy] = color
-
                 if "line" in args.specdraw:
                         if intensity > 16:
                             color_index = (1 + y) % len(colors)
                         else:
                             color_index = (2 + y) % len(colors)
-                        color = colors[color_index]
-                        screen[x_coord, dy] = color
-
                 if "fire" in args.specdraw:
                         color_index = (3 + dy-y) % len(colors)
-                        color = colors[color_index]
-                        screen[x_coord, dy] = color
+
+                color = colors[color_index]
+                screen[x_coord, dy] = color
 
     elif visualization_mode == 2:  # Grid mode
         pass  # Nothing to draw, as the grid is already drawn in the background
