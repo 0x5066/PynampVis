@@ -94,7 +94,7 @@ def draw_wave(indata, frames, time, status):
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
-    fft_size = length*4
+    fft_size = blocksize_ratio*23
     ys = window_height // 2 * (1 - np.clip(gain * oscaudio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)
 
