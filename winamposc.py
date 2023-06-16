@@ -54,7 +54,7 @@ sd.default.samplerate = 44100
 
 # Desired frequency range in Hz
 frequency_min = 0
-frequency_max = 22051
+frequency_max = 44100
 
 # Load the first two colors from the viscolor.txt file
 colors = load_colors("viscolor.txt")
@@ -86,17 +86,25 @@ def OscColors():
 Oscicolors = OscColors() # inits the whole thing
 
 def draw_wave(indata, frames, time, status):
-    global visualization_mode
+    global visualization_mode, ys, peak1
 
-    mono_audio = (indata[:, 0] + indata[:, 1] / 2) + 0.03
+    mono_audio = (indata[:, 0] + indata[:, 1] / 2) 
+    oscaudio = mono_audio + 0.03
     length = len(mono_audio)
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
     fft_size = length*4
-    #print(xs)
-    ys = window_height // 2 * (1 - np.clip(gain * mono_audio[::blocksize_ratio], -1, 1))
+    ys = window_height // 2 * (1 - np.clip(gain * oscaudio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)
+
+    #print(ys)
+
+    # uncomment to dump oscilloscope to file
+    #ys_flat = ys.flatten()
+
+    #f = open('output.raw', 'ab')
+    #ys_flat.astype(np.int8).tofile(f)
 
     # Draw the grid background
     for x in range(window_width):
@@ -157,7 +165,7 @@ def draw_wave(indata, frames, time, status):
     elif visualization_mode == 0:  # Analyzer mode
 
         window2 = windows.hann(fft_size)
-        windowed_audio = (mono_audio - 0.03) / 12
+        windowed_audio = (mono_audio) / 12
         windowed_audio = np.resize(windowed_audio, len(window2)) * window2
         spectrum = np.abs(np.fft.fft(windowed_audio, n=fft_size))
         frequencies = np.fft.fftfreq(fft_size, 1 / sd.default.samplerate)
@@ -167,35 +175,78 @@ def draw_wave(indata, frames, time, status):
 
         scaled_spectrum = weighted_spectrum * window_height
 
-        for x in range(len(frequencies)):
-            frequency = frequencies[x]
+        for x, y in zip(xs, scaled_spectrum):
+            x = np.clip(x, 0, window_width - 1)
+            y = int(np.clip(-y+17, 1, window_height - 0))
+
+            if y >= 16:
+                y = 15
+            else:
+                y = y
+
             intensity = scaled_spectrum[x]
-            #print(intensity)
-        
-            # Skip drawing if intensity is below threshold
-            if intensity < 1:
+
+            if intensity < 0.5:
                 continue
 
-            x_norm = ((frequency - frequency_min) / (frequency_max - frequency_min))
-            x_coord = int((x_norm * window_width) * 1152 / args.blocksize)
-            x_coord = np.clip(x_coord, 0, window_width - 1)  # Clip x_coord within the valid range
+            # if y <= peak1:
+            #     peak1 = y
+            # else:
+            #     peak1 += 1
 
-            y = int(window_height - intensity) + 1  # Shift down by 1 pixel
-            y = np.clip(y, 1, window_height - 1)  # Clip y within the valid range
+            # if x == 0:
+            #     last_y = peak1
 
-            for dy in range(y, window_height):
+            if y >= 16:
+                top = 1
+                bottom = y
+            else:
+                top = y
+                bottom = 16
+
+            for dy in range(top, bottom):
                 if "normal" in args.specdraw:
-                        color_index = (2 + dy) % len(colors)
+                    color_index = (2 + dy) % len(colors)
                 if "line" in args.specdraw:
-                        if intensity > 16:
-                            color_index = (1 + y) % len(colors)
-                        else:
-                            color_index = (2 + y) % len(colors)
+                    if intensity > 16:
+                        color_index = (1 + y) % len(colors)
+                    else:
+                        color_index = (2 + y) % len(colors)
                 if "fire" in args.specdraw:
-                        color_index = (3 + dy-y) % len(colors)
+                    color_index = (3 + dy-y) % len(colors)
 
-                color = colors[color_index]
-                screen[x_coord, dy] = color
+                color = colors[int(color_index)]
+                screen[x, dy] = color
+
+        # for x in range(window_width):
+        #     frequency = frequencies[x]
+        #     intensity = scaled_spectrum[x]
+        #     #print(intensity)
+        
+        #     # Skip drawing if intensity is below threshold
+        #     if intensity < 1:
+        #         continue
+
+        #     x_norm = ((frequency - frequency_min) / (frequency_max - frequency_min))
+        #     x_coord = int((x_norm * window_width) * 1152 / args.blocksize)
+        #     x_coord = np.clip(x_coord, 0, window_width - 1)  # Clip x_coord within the valid range
+
+        #     y = int(window_height - intensity) + 1  # Shift down by 1 pixel
+        #     y = np.clip(y, 1, window_height - 1)  # Clip y within the valid range
+
+        #     for dy in range(y, window_height):
+        #         if "normal" in args.specdraw:
+        #                 color_index = (2 + dy) % len(colors)
+        #         if "line" in args.specdraw:
+        #                 if intensity > 16:
+        #                     color_index = (1 + y) % len(colors)
+        #                 else:
+        #                     color_index = (2 + y) % len(colors)
+        #         if "fire" in args.specdraw:
+        #                 color_index = (3 + dy-y) % len(colors)
+
+        #         color = colors[color_index]
+        #         screen[x_coord, dy] = color
 
     elif visualization_mode == 2:  # Grid mode
         pass  # Nothing to draw, as the grid is already drawn in the background
