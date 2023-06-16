@@ -1,2 +1,4 @@
 __pycache__/viscolors.cpython-311.pyc
 .vscode/launch.json
+dump_audio.py
+output.raw

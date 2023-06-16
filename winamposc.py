@@ -16,9 +16,11 @@ parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', 
 parser.add_argument("-s", "--specdraw", help="Coloring style", nargs='*', type=str.lower, default=["normal"])
 #parser.add_argument("-v", "--visualization", help="Visualization type: oscilloscope or analyzer", type=str.lower,
                     #choices=["oscilloscope", "analyzer", "grid"], default="analyzer")
+parser.add_argument("-bw", "--bandwidth", help="Band line width", nargs='*', type=str.lower, default=["thick"])
 parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
 parser.add_argument("-d", "--device", help="Select your Device", type=int, default=None)
 args = parser.parse_args()
+fun_mode = 0
 
 # Check if the device argument is provided
 if args.device is None:
@@ -39,13 +41,19 @@ else:
 pygame.init()
 pygame.display.set_caption('Winamp Mini Visualizer (in Python)')
 global screen, last_y, window_width, window_height
-window_width = 75  # Initial desired screen width
-window_height = 16  # Initial desired screen height
+window_width = 75
+if fun_mode == 1:
+    window_height = 16*4
+elif fun_mode == 2:
+    window_height = 16
+else:
+    window_height = 16
 window = pygame.display.set_mode((window_width * 8, window_height * 8), pygame.RESIZABLE)
 xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
 gain = 2
 last_y = 0
+peak1 = 0
 running = True
 visualization_mode = 0  # 0 for oscilloscope, 1 for analyzer, 2 for grid
 
@@ -88,23 +96,32 @@ Oscicolors = OscColors() # inits the whole thing
 def draw_wave(indata, frames, time, status):
     global visualization_mode, ys, peak1
 
-    mono_audio = (indata[:, 0] + indata[:, 1] / 2) 
+    mono_audio = (indata[:, 0] + indata[:, 1]) / 2
     oscaudio = mono_audio + 0.03
     length = len(mono_audio)
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
-    fft_size = blocksize_ratio*23
+    if "thick" in args.bandwidth:
+        fft_size = blocksize_ratio*22
+    else: 
+        fft_size = blocksize_ratio*23
     ys = window_height // 2 * (1 - np.clip(gain * oscaudio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)
 
-    #print(ys)
+    if fun_mode >= 1:
+        leftaudio = indata[:, 0]
+        rightaudio = indata[:, 1]
+        yx = window_height // 2 * (1 - np.clip(leftaudio[::blocksize_ratio], -1, 1))
+        xy = window_width // 2 * (1 - np.clip(rightaudio[::blocksize_ratio], -1, 1))
+        yx = yx.astype(int)
+        xy = xy.astype(int)
 
-    # uncomment to dump oscilloscope to file
-    #ys_flat = ys.flatten()
+    if fun_mode == 2:
+        ys_flat = ys.flatten()
 
-    #f = open('output.raw', 'ab')
-    #ys_flat.astype(np.int8).tofile(f)
+        f = open('output.raw', 'ab')
+        ys_flat.astype(np.int8).tofile(f)
 
     # Draw the grid background
     for x in range(window_width):
@@ -175,7 +192,12 @@ def draw_wave(indata, frames, time, status):
 
         scaled_spectrum = weighted_spectrum * window_height
 
-        for x, y in zip(xs, scaled_spectrum):
+        if "thick" in args.bandwidth:
+            xs2 = xs*4
+        else: 
+            xs2 = xs
+
+        for x, y in zip(xs2, scaled_spectrum):
             x = np.clip(x, 0, window_width - 1)
             y = int(np.clip(-y+17, 1, window_height - 0))
 
@@ -216,7 +238,12 @@ def draw_wave(indata, frames, time, status):
                     color_index = (3 + dy-y) % len(colors)
 
                 color = colors[int(color_index)]
-                screen[x, dy] = color
+                if "thick" in args.bandwidth:
+                    screen[x, dy] = color
+                    screen[(x + 1) % window_width, dy] = color
+                    screen[(x + 2) % window_width, dy] = color
+                else: 
+                    screen[x, dy] = color
 
         # for x in range(window_width):
         #     frequency = frequencies[x]
@@ -248,7 +275,20 @@ def draw_wave(indata, frames, time, status):
         #         color = colors[color_index]
         #         screen[x_coord, dy] = color
 
-    elif visualization_mode == 2:  # Grid mode
+    if fun_mode >= 1:
+
+        for x, y in zip(xy, yx):
+            x = np.clip(x, 0, window_width - 1)
+            y = np.clip(y, 0, window_height - 1)
+            top = y
+            bottom = y
+
+            for dy in range(top, bottom + 1):
+                color_index = (top) % len(Oscicolors)
+                ScopeColors = Oscicolors[color_index]
+                screen[x % window_width, np.clip(dy, 0, window_height - 1)] = (0,255,0)
+
+    elif visualization_mode == 2:  # None
         pass  # Nothing to draw, as the grid is already drawn in the background
 
     surface = pygame.surfarray.make_surface(screen)
