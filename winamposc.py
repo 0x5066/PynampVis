@@ -75,9 +75,9 @@ def weighting_function(frequencies):
     weights = np.ones_like(frequencies)  # Start with equal weights for all frequencies
 
     # Apply natural weighting, kind of like an equalizer...
-    #                                                                                           secbar
-    A_weighting = [-14.2, -14.2, -14.2, -14.2, -14.2, -14.2, -15.2, -15.2, -14.2, -13.2, -16.2, -10.1, -6.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0]
-    f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000]
+    #               20      25     31.5    40    50     63     80    100    125    160     200   250    315   400   500  630  800 1000 1250 16002000 3000  4000  5000  6000 10000 
+    A_weighting = [-10.2, -12.2, -12.2, -13.2, -13.2, -14.2, -15.2, -15.2, -14.2, -13.2, -13.2, -10.1, -6.4, -8.9, -3.6, 0.6, 1.8, 2.2, 3.9, 5, 8.0, 10.0, 13.0, 16.0, 18.0, 18.0]
+    f_values = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 3000, 4000, 5000, 6000, 10000]
     # frequency values
 
     for i, freq in enumerate(frequencies):
@@ -102,10 +102,7 @@ def draw_wave(indata, frames, time, status):
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
-    if "thick" in args.bandwidth:
-        fft_size = blocksize_ratio*22
-    else: 
-        fft_size = blocksize_ratio*23
+    fft_size = blocksize_ratio*23
     ys = window_height // 2 * (1 - np.clip(gain * oscaudio[::blocksize_ratio], -1, 1))
     ys = ys.astype(int)
 
@@ -197,9 +194,9 @@ def draw_wave(indata, frames, time, status):
         else: 
             xs2 = xs
 
-        for x, y in zip(xs2, scaled_spectrum):
+        for x, y in zip(xs2, scaled_spectrum[np.clip(xs2, 0, len(scaled_spectrum) - 1)]):
             x = np.clip(x, 0, window_width - 1)
-            y = int(np.clip(-y+17, 1, window_height - 0))
+            y = int(np.clip(-y + 17, 1, window_height - 1))
 
             if y >= 16:
                 y = 15
@@ -239,9 +236,9 @@ def draw_wave(indata, frames, time, status):
 
                 color = colors[int(color_index)]
                 if "thick" in args.bandwidth:
-                    screen[x, dy] = color
-                    screen[(x + 1) % window_width, dy] = color
-                    screen[(x + 2) % window_width, dy] = color
+                    screen[np.clip(x, 0, window_width - 1), dy] = color
+                    screen[np.clip((x + 1), 0, window_width - 1), dy] = color
+                    screen[np.clip((x + 2), 0, window_width - 1), dy] = color
                 else: 
                     screen[x, dy] = color
 
