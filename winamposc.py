@@ -94,7 +94,6 @@ def OscColorsAndPeak():
     # maps to 4 4 3 3 2 2 1 1 2 2 3 3 4 4 5 5
 
 Oscicolors = OscColorsAndPeak() # inits the whole thing
-print(len(colors))
 
 def draw_wave(indata, frames, time, status):
     global visualization_mode, ys, peak1
@@ -112,8 +111,8 @@ def draw_wave(indata, frames, time, status):
     if fun_mode >= 1:
         leftaudio = indata[:, 0]
         rightaudio = indata[:, 1]
-        yx = window_height // 2 * (1 - np.clip(leftaudio[::blocksize_ratio], -1, 1))
-        xy = window_width // 2 * (1 - np.clip(rightaudio[::blocksize_ratio], -1, 1))
+        yx = window_height // 2 * (1 - np.clip(rightaudio[::blocksize_ratio], -1, 1))
+        xy = window_width // 2 * (1 - np.clip(leftaudio[::blocksize_ratio], -1, 1))
         yx = yx.astype(int)
         xy = xy.astype(int)
 
@@ -278,7 +277,7 @@ def draw_wave(indata, frames, time, status):
     if fun_mode >= 1:
 
         for x, y in zip(xy, yx):
-            x = np.clip(x, 0, window_width - 1)
+            x = np.clip(-x+window_width-1, 0, window_width - 1)
             y = np.clip(y, 0, window_height - 1)
             top = y
             bottom = y
