@@ -14,11 +14,10 @@ def get_sound_devices():
 parser = argparse.ArgumentParser(description='Winamp Visualizer in Python')
 parser.add_argument("-o", "--oscstyle", help="Oscilloscope drawing", nargs='*', type=str.lower, default=["lines"])
 parser.add_argument("-s", "--specdraw", help="Coloring style", nargs='*', type=str.lower, default=["normal"])
-#parser.add_argument("-v", "--visualization", help="Visualization type: oscilloscope or analyzer", type=str.lower,
-                    #choices=["oscilloscope", "analyzer", "grid"], default="analyzer")
 parser.add_argument("-bw", "--bandwidth", help="Band line width", nargs='*', type=str.lower, default=["thick"])
 parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
 parser.add_argument("-d", "--device", help="Select your Device", type=int, default=None)
+parser.add_argument("-v", "--viscolor", help="Define viscolor.txt", type=str, default="viscolor.txt")
 args = parser.parse_args()
 fun_mode = 0
 
@@ -65,7 +64,7 @@ frequency_min = 0
 frequency_max = 44100
 
 # Load the first two colors from the viscolor.txt file
-colors = load_colors("viscolor.txt")
+colors = load_colors(args.viscolor)
 
 def weighting_function(frequencies):
     """
@@ -86,12 +85,16 @@ def weighting_function(frequencies):
 
     return weights
 
-def OscColors():
-    ScopeColors = [colors[21], colors[21], colors[20], colors[20], colors[19], colors[19], colors[18], colors[18], colors[19], colors[19], colors[20], colors[20], colors[21], colors[21], colors[22], colors[22]]
+def OscColorsAndPeak():
+    if len(colors) == 35:
+        ScopeColors = [colors[18], colors[19], colors[20], colors[21], colors[22], colors[23], colors[24], colors[25], colors[26], colors[27], colors[28], colors[29], colors[30], colors[31], colors[32], colors[33]]
+    else:
+        ScopeColors = [colors[21], colors[21], colors[20], colors[20], colors[19], colors[19], colors[18], colors[18], colors[19], colors[19], colors[20], colors[20], colors[21], colors[21], colors[22], colors[22]]
     return ScopeColors
     # maps to 4 4 3 3 2 2 1 1 2 2 3 3 4 4 5 5
 
-Oscicolors = OscColors() # inits the whole thing
+Oscicolors = OscColorsAndPeak() # inits the whole thing
+print(len(colors))
 
 def draw_wave(indata, frames, time, status):
     global visualization_mode, ys, peak1
