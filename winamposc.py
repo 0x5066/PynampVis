@@ -18,6 +18,7 @@ parser.add_argument("-bw", "--bandwidth", help="Band line width", nargs='*', typ
 parser.add_argument("-b", "--blocksize", help="Blocksize for audio buffer", type=int, default=576)
 parser.add_argument("-d", "--device", help="Select your Device", type=int, default=None)
 parser.add_argument("-v", "--viscolor", help="Define viscolor.txt", type=str, default="viscolor.txt")
+parser.add_argument('-m', '--modern', help="Modern Skin mode", action='store_true')
 args = parser.parse_args()
 fun_mode = 0
 
@@ -38,9 +39,14 @@ else:
     selected_device = args.device
 
 pygame.init()
-pygame.display.set_caption('Winamp Mini Visualizer (in Python)')
+
 global screen, last_y, window_width, window_height
-window_width = 75
+if args.modern is True:
+    pygame.display.set_caption('Winamp Modern Mini Visualizer (in Python)')
+    window_width = 72
+else:
+    pygame.display.set_caption('Winamp Mini Visualizer (in Python)')
+    window_width = 75
 if fun_mode == 1:
     window_height = 16*4
 elif fun_mode == 2:
@@ -151,7 +157,10 @@ def draw_wave(indata, frames, time, status):
                 for dy in range(top, bottom + 1):
                     color_index = (top) % len(Oscicolors)
                     ScopeColors = Oscicolors[color_index]
-                    screen[x, dy] = ScopeColors
+                    if args.modern is True:
+                        screen[x, -dy+15] = ScopeColors
+                    else:
+                        screen[x, dy] = ScopeColors
 
             elif "solid" in args.oscstyle:
                 if x == 0:
@@ -167,7 +176,10 @@ def draw_wave(indata, frames, time, status):
                 for dy in range(top, bottom + 1):
                     color_index = (y) % len(Oscicolors)
                     ScopeColors = Oscicolors[color_index]
-                    screen[x, dy] = ScopeColors
+                    if args.modern is True:
+                        screen[x, -dy+15] = ScopeColors
+                    else:
+                        screen[x, dy] = ScopeColors
 
             elif "dots" in args.oscstyle:
                 top = y
@@ -176,7 +188,10 @@ def draw_wave(indata, frames, time, status):
                 for dy in range(top, bottom + 1):
                     color_index = (y) % len(Oscicolors)
                     ScopeColors = Oscicolors[color_index]
-                    screen[x, dy] = ScopeColors
+                    if args.modern is True:
+                        screen[x, -dy+15] = ScopeColors
+                    else:
+                        screen[x, dy] = ScopeColors
 
     elif visualization_mode == 0:  # Analyzer mode
 
@@ -285,7 +300,7 @@ def draw_wave(indata, frames, time, status):
             for dy in range(top, bottom + 1):
                 color_index = (top) % len(Oscicolors)
                 ScopeColors = Oscicolors[color_index]
-                screen[x % window_width, np.clip(dy, 0, window_height - 1)] = (0,255,0)
+                screen[x % window_width, np.clip(dy, 0, window_height - 1)] = (124,252,0)
 
     elif visualization_mode == 2:  # None
         pass  # Nothing to draw, as the grid is already drawn in the background
@@ -294,17 +309,6 @@ def draw_wave(indata, frames, time, status):
     scaled_surface = pygame.transform.scale(surface, (window.get_width(), window.get_height()))
     window.blit(scaled_surface, (0, 0))
     pygame.display.flip()
-
-
-def resize_window(width, height):
-    global screen, window_width, window_height, xs
-
-    window_width = width
-    window_height = height
-
-    screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
-    xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
-
 
 with sd.InputStream(callback=draw_wave, channels=2, blocksize=args.blocksize*2, latency=0, device=args.device):
     while running:
