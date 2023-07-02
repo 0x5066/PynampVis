@@ -10,15 +10,21 @@ The script is primarily a CLI program, due to how the initial setup works. You *
 
 The following command line operations are currently present:
 ```
--o, --oscstyle                 Lets you choose between three styles, "lines", "solid" and "dots". By default "solid" is applied.
+-o, --oscstyle                 Lets you choose between three styles, "lines", "solid" and "dots".
+                               By default "solid" is applied.
 
--s, --specdraw                 Works the same as --oscstyle, "normal", "fire", "line". By default "normal" is applied.
+-s, --specdraw                 Works the same as --oscstyle, "normal", "fire", "line".
+                               By default "normal" is applied.
 
--bw, --bandwidth               Lets you choose the bandwidth for the analyzer. "thin" and "thick". By default "thick" is applied.
+-bw, --bandwidth               Lets you choose the bandwidth for the analyzer.
+                               "thin" and "thick". By default "thick" is applied.
 
--b, --blocksize                The buffer used for audio processing, higher and lower values aren't exactly recommended. Default is 576 smps (to match Winamp/WACUP behavior)
+-b, --blocksize                The buffer used for audio processing,
+                               higher and lower values aren't exactly recommended.
+                               Default is 576 smps (to match Winamp/WACUP behavior)
 
--d, --device                   The device you want to use. Only accepts integer as input. See above on how to get a list of devices present.
+-d, --device                   The device you want to use. Only accepts integer as input.
+                               See above on how to get a list of devices present.
 
 -v, --viscolor                 Lets you use a custom viscolor.txt or viscolor_16osc.txt.
 
