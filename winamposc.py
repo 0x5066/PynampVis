@@ -1,6 +1,5 @@
 #ChatGPT wrote most of this.
 
-import pygame
 import sounddevice as sd
 import numpy as np
 import argparse
@@ -38,6 +37,7 @@ else:
     # If device argument is provided, use it for further processing
     selected_device = args.device
 
+import pygame
 pygame.init()
 
 global screen, last_y, window_width, window_height
@@ -50,9 +50,9 @@ else:
 if fun_mode == 1:
     window_height = 16*4
 elif fun_mode == 2:
-    window_height = 16
+    window_height = 35
 else:
-    window_height = 16
+    window_height = 35
 window = pygame.display.set_mode((window_width * 8, window_height * 8), pygame.RESIZABLE)
 xs = np.linspace(0, window_width - 1, num=window_width, dtype=np.int32)
 screen = np.zeros((window_width, window_height, 3), dtype=np.uint8)
@@ -104,19 +104,22 @@ Oscicolors = OscColorsAndPeak() # inits the whole thing
 def draw_wave(indata, frames, time, status):
     global visualization_mode, ys, peak1
 
-    mono_audio = (indata[:, 0] + indata[:, 1]) / 2
+    mono_audio = indata[:, 0] + indata[:, 1] / 2
     oscaudio = mono_audio + 0.03
     length = len(mono_audio)
+    leftaudio = indata[:, 0]
+    rightaudio = indata[:, 1]
 
     length = len(xs)
     blocksize_ratio = int(args.blocksize / length)
     fft_size = blocksize_ratio*23
-    ys = window_height // 2 * (1 - np.clip(gain * oscaudio[::blocksize_ratio], -1, 1))
+    ys = 16 // 2 * (1 - np.clip(gain * leftaudio[::blocksize_ratio] + 0.03, -1, 1))
     ys = ys.astype(int)
 
+    ys2 = 16 // 2 * (1 - np.clip(gain * rightaudio[::blocksize_ratio] + 0.03, -1, 1))
+    ys2 = ys2.astype(int)
+
     if fun_mode >= 1:
-        leftaudio = indata[:, 0]
-        rightaudio = indata[:, 1]
         yx = window_height // 2 * (1 - np.clip(rightaudio[::blocksize_ratio], -1, 1))
         xy = window_width // 2 * (1 - np.clip(leftaudio[::blocksize_ratio], -1, 1))
         yx = yx.astype(int)
@@ -138,21 +141,31 @@ def draw_wave(indata, frames, time, status):
 
     # Draw the visualization based on the selected mode
     if visualization_mode == 1:  # Oscilloscope mode
-        for x, y in zip(xs, ys):
+        for x, y, y2 in zip(xs, ys, ys2):
             x = np.clip(x, 0, window_width - 1)
-            y = np.clip(y, 0, window_height - 1)
+            y = np.clip(y, 0, 16 - 1)
+            y2 = np.clip(y2, 0, 16 - 1)
 
             if "lines" in args.oscstyle:
                 if x == 0:
                     last_y = y
+                    last_y2 = y2
 
                 top = y
                 bottom = last_y
                 last_y = y
 
+                top2 = y2
+                bottom2 = last_y2
+                last_y2 = y2
+
                 if bottom < top:
                     [bottom, top] = [top, bottom]
                     top += 1
+                
+                if bottom2 < top2:
+                    [bottom2, top2] = [top2, bottom2]
+                    top2 += 1
 
                 for dy in range(top, bottom + 1):
                     color_index = (top) % len(Oscicolors)
@@ -162,9 +175,18 @@ def draw_wave(indata, frames, time, status):
                     else:
                         screen[x, dy] = ScopeColors
 
+                for dy2 in range(top2, bottom2 + 1):
+                    color_index = (top2) % len(Oscicolors)
+                    ScopeColors = Oscicolors[color_index]
+                    if args.modern is True:
+                        screen[x, -dy2-2] = ScopeColors
+                    else:
+                        screen[x, dy2-17] = ScopeColors
+
             elif "solid" in args.oscstyle:
                 if x == 0:
                     last_y = y
+                    last_y2 = y2
 
                 if y >= 8:
                     top = 8
@@ -173,6 +195,13 @@ def draw_wave(indata, frames, time, status):
                     top = y
                     bottom = 7
 
+                if y2 >= 8:
+                    top2 = 8
+                    bottom2 = y2
+                else:
+                    top2 = y2
+                    bottom2 = 7
+
                 for dy in range(top, bottom + 1):
                     color_index = (y) % len(Oscicolors)
                     ScopeColors = Oscicolors[color_index]
@@ -180,65 +209,82 @@ def draw_wave(indata, frames, time, status):
                         screen[x, -dy+15] = ScopeColors
                     else:
                         screen[x, dy] = ScopeColors
+
+                for dy2 in range(top2, bottom2 + 1):
+                    color_index = (y2) % len(Oscicolors)
+                    ScopeColors = Oscicolors[color_index]
+                    if args.modern is True:
+                        screen[x, -dy2-2] = ScopeColors
+                    else:
+                        screen[x, dy2-16] = ScopeColors
 
             elif "dots" in args.oscstyle:
-                top = y
-                bottom = y
 
-                for dy in range(top, bottom + 1):
+                for dy in range(y):
                     color_index = (y) % len(Oscicolors)
                     ScopeColors = Oscicolors[color_index]
                     if args.modern is True:
-                        screen[x, -dy+15] = ScopeColors
+                        screen[x, -y+15] = ScopeColors
                     else:
-                        screen[x, dy] = ScopeColors
+                        screen[x, y] = ScopeColors
+
+                for dy2 in range(y2):
+                    color_index = (y2) % len(Oscicolors)
+                    ScopeColors = Oscicolors[color_index]
+                    if args.modern is True:
+                        screen[x, -y2-2] = ScopeColors
+                    else:
+                        screen[x, y2-16] = ScopeColors
 
     elif visualization_mode == 0:  # Analyzer mode
 
         window2 = windows.hann(fft_size)
-        windowed_audio = (mono_audio) / 12
-        windowed_audio = np.resize(windowed_audio, len(window2)) * window2
-        spectrum = np.abs(np.fft.fft(windowed_audio, n=fft_size))
+        windowed_audioL = (leftaudio) / 12
+        windowed_audioR = (rightaudio) / 12
+        windowed_audioL = np.resize(windowed_audioL, len(window2)) * window2
+        windowed_audioR = np.resize(windowed_audioR, len(window2)) * window2
+        spectrum = np.abs(np.fft.fft(windowed_audioL, n=fft_size))
+        spectrum2 = np.abs(np.fft.fft(windowed_audioR, n=fft_size))
         frequencies = np.fft.fftfreq(fft_size, 1 / sd.default.samplerate)
 
         weights = weighting_function(frequencies)
         weighted_spectrum = spectrum * weights
+        weighted_spectrum2 = spectrum2 * weights
 
-        scaled_spectrum = weighted_spectrum * window_height
+        scaled_spectrum = weighted_spectrum * 16
+        scaled_spectrum2 = weighted_spectrum2 * 16
 
         if "thick" in args.bandwidth:
             xs2 = xs*4
         else: 
             xs2 = xs
 
-        for x, y in zip(xs2, scaled_spectrum[np.clip(xs2, 0, len(scaled_spectrum) - 1)]):
-            x = np.clip(x, 0, window_width - 1)
-            y = int(np.clip(-y + 17, 1, window_height - 1))
-
-            if y >= 16:
-                y = 15
-            else:
-                y = y
+        for x, y, y2 in zip(xs2, scaled_spectrum[np.clip(xs2, 0, len(scaled_spectrum) - 1)], scaled_spectrum2[np.clip(xs2, 0, len(scaled_spectrum2) - 1)]):
+            x = np.clip(x, 0, 75 - 0)
+            y = int(np.clip(-y + 17, 1, 17 - 1))
+            y2 = int(np.clip(-y2 + 17, 1, 17 - 1))
 
             intensity = scaled_spectrum[x]
-
-            if intensity < 0.5:
-                continue
-
-            # if y <= peak1:
-            #     peak1 = y
-            # else:
-            #     peak1 += 1
-
-            # if x == 0:
-            #     last_y = peak1
+            intensity2 = scaled_spectrum2[x]
 
             if y >= 16:
-                top = 1
+                top = 17
                 bottom = y
             else:
                 top = y
                 bottom = 16
+
+            if y2 >= 16:
+                top2 = 17
+                bottom2 = y2
+            else:
+                top2 = y2
+                bottom2 = 16
+
+            if x >= 75:
+                top = 17
+            if x >= 75:
+                top2 = 17
 
             for dy in range(top, bottom):
                 if "normal" in args.specdraw:
@@ -259,35 +305,24 @@ def draw_wave(indata, frames, time, status):
                 else: 
                     screen[x, dy] = color
 
-        # for x in range(window_width):
-        #     frequency = frequencies[x]
-        #     intensity = scaled_spectrum[x]
-        #     #print(intensity)
-        
-        #     # Skip drawing if intensity is below threshold
-        #     if intensity < 1:
-        #         continue
+            for dy2 in range(top2, bottom2):
+                if "normal" in args.specdraw:
+                    color_index = (2 + dy2) % len(colors)
+                if "line" in args.specdraw:
+                    if intensity2 > 16:
+                        color_index = (1 + y2) % len(colors)
+                    else:
+                        color_index = (2 + y2) % len(colors)
+                if "fire" in args.specdraw:
+                    color_index = (3 + dy2-y2) % len(colors)
 
-        #     x_norm = ((frequency - frequency_min) / (frequency_max - frequency_min))
-        #     x_coord = int((x_norm * window_width) * 1152 / args.blocksize)
-        #     x_coord = np.clip(x_coord, 0, window_width - 1)  # Clip x_coord within the valid range
-
-        #     y = int(window_height - intensity) + 1  # Shift down by 1 pixel
-        #     y = np.clip(y, 1, window_height - 1)  # Clip y within the valid range
-
-        #     for dy in range(y, window_height):
-        #         if "normal" in args.specdraw:
-        #                 color_index = (2 + dy) % len(colors)
-        #         if "line" in args.specdraw:
-        #                 if intensity > 16:
-        #                     color_index = (1 + y) % len(colors)
-        #                 else:
-        #                     color_index = (2 + y) % len(colors)
-        #         if "fire" in args.specdraw:
-        #                 color_index = (3 + dy-y) % len(colors)
-
-        #         color = colors[color_index]
-        #         screen[x_coord, dy] = color
+                color = colors[int(color_index)]
+                if "thick" in args.bandwidth:
+                    screen[np.clip(x, 0, window_width - 1), -dy2-1] = color
+                    screen[np.clip((x + 1), 0, window_width - 1), -dy2-1] = color
+                    screen[np.clip((x + 2), 0, window_width - 1), -dy2-1] = color
+                else: 
+                    screen[x, -dy2-1] = color
 
     if fun_mode >= 1:
 
@@ -310,7 +345,7 @@ def draw_wave(indata, frames, time, status):
     window.blit(scaled_surface, (0, 0))
     pygame.display.flip()
 
-with sd.InputStream(callback=draw_wave, channels=2, blocksize=args.blocksize*2, latency=0, device=args.device):
+with sd.InputStream(dtype='float32', callback=draw_wave, channels=2, blocksize=args.blocksize*2, latency=0, device=args.device):
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
